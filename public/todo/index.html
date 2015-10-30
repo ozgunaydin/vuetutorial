@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>vuejs tutorial</title>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-MfvZlkHCEqatNoGiOXveE8FIwMzZg4W85qfrfIFBfYc= sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="todo.css">
+
+</head>
+<body>
+
+
+<div class="container">
+    <div id="tasks">
+        <div>
+            <h1 v-show="remaining.length">Tasks ({{remaining.length}})</h1>
+
+            <ol class="list-goup">
+                <li v-for="task in tasks | inProcess" class="list-group-item">
+                    <span v-on:dblclick="editTask(task)">{{task.body}}</span>
+                    <i v-on:click="removeTask(task)"class="fa fa-times-circle remove-task"></i>
+                    <i v-on:click="completeTask(task)"class="fa fa-check-circle complete-task"></i>
+                </li>
+            </ol>
+
+            <h1 v-show="completions.length">Completed ({{completions.length}})</h1>
+            <ol class="list-goup">
+                <li v-for="task in tasks | filterBy !inProcess" class="list-group-item">
+                    <span v-on:dblclick="editTask(task)" class="completed-task">{{task.body}}</span>
+                    <i v-on:click="removeTask(task)"class="fa fa-times-circle remove-task"></i>
+                </li>
+            </ol>
+        </div>
+
+        <form v-on:submit="addTask">
+            <div class="form-group">
+                <input type="text"
+                       class="form-control"
+                       placeholder="I need to.."
+                       v-el="newTask"
+                       v-model="newTask"/>
+            </div>
+        </form>
+        <button class="btn btn-success" v-on:click="markAllCompleted">Mark all as completed</button>
+        <button class="btn btn-danger" v-on:click="clearCompleted">Clear completed</button>
+
+    </div>
+</div>
+
+
+<script src="http://cdn.jsdelivr.net/vue/1.0.3/vue.min.js"></script>
+<script src="todo.js"></script>
+</body>
+</html>

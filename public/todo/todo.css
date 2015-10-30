@@ -1,0 +1,23 @@
+.remove-task{
+    color:red;
+}
+
+.complete-task{
+    color:darkgreen;
+}
+
+.completed-task{
+    text-decoration: line-through;
+    color: darkgreen;
+}
+
+.list-group-item > i {
+    float: right;
+    line-height: inherit;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+ol{
+    padding: 0;
+}
