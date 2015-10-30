@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>vuejs tutorial</title>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha256-MfvZlkHCEqatNoGiOXveE8FIwMzZg4W85qfrfIFBfYc= sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ=="
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="app.css">
+
+</head>
+<body>
+
+
+<div class="container">
+    <div id="demo">
+        <label for="search">With keyword:</label>
+        <input type="text" id="search" v-model="search" class="form-control" placeholder="Search For.."/>
+
+        <label for="">With Age:</label>
+        <div class="radio">
+            <label>
+                <input type="radio" name="age" v-model="age" value="all"/> All
+            </label>
+            <label>
+                <input type="radio" name="age" v-model="age" value="above"/>Above 50
+            </label>
+            <label>
+                <input type="radio" name="age" v-model="age" value="below"/> Below 50
+            </label>
+        </div>
+
+        <label for="">Have Fun: reverse names!</label>
+        <div class="radio">
+            <label>
+                <input type="radio" name="age" v-model="reverseGame" value=""/> Deactivate
+            </label>
+            <label>
+                <input type="radio" name="age" v-model="reverseGame" value="letters"/>Letters
+            </label>
+            <label>
+                <input type="radio" name="age" v-model="reverseGame" value="words"/> Words
+            </label>
+        </div>
+
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th><a href="#" v-on:click.stop="sortBy('name')" v-bind:class="{'active': (sortKey == 'name')}">Name</a></th>
+                <th><a href="#" v-on:click.stop="sortBy('age')" v-bind:class="{'active': (sortKey == 'age')}">Age</a></th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr v-for="person in people | filterBy search | orderBy sortKey reverse | byAge ">
+                <td>{{person.name | reverse reverseGame }}</td>
+                <td>{{person.age}}</td>
+            </tr>
+            </tbody>
+        </table>
+
+    </div>
+</div>
+
+
+<script src="http://cdn.jsdelivr.net/vue/1.0.3/vue.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

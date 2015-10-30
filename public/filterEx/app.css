@@ -1,0 +1,12 @@
+
+.active{
+    font-weight: bold;
+}
+
+div.radio label{
+    margin-right: 15px;
+}
+
+body{
+    margin-top: 2em;
+}
