@@ -448,7 +448,7 @@ class AGIActions
                 if (preg_match("/^(0764)/", $callerid)) {
                     if (isset($params["original_caller_user"])) {
                         $this->fastagi->mylog("original_caller_user: " . json_encode($params["original_caller_user"]));
-                        if (preg_match("/^(0764)/", $callerid)) {
+                        if (preg_match("/^(076411)/", $callerid)) {
                             $callerid = substr($callerid, 0, 4) . $params["original_caller_user"]["name"];
                         }else{
                             $callerid .= $params["original_caller_user"]["name"];
