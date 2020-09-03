@@ -110,7 +110,6 @@ trait CallIn
                 $agi->mylog("dnid " . $dnid);
 
                 $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix.$callerUser->name);
-                $agi->exec("Set", "CALLERID(num)=" . $callerUser->name);
                 $agi->exec('Set', "CDR(route)=l2l");
                 $agi->exec('Set', "CDR(dst)={$agi->request['agi_extension']}");
                 $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
@@ -125,7 +124,7 @@ trait CallIn
                 $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
                 $agi->mylog("dnid " . $dnid);
 
-                $agi->exec("Set", "CALLERID(num)=" . $callerUser->name);
+                $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix.$callerUser->name);
                 $agi->exec('Set', "CDR(route)=l2l");
                 $agi->exec('Set', "CDR(dst)={$agi->request['agi_extension']}");
                 $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
