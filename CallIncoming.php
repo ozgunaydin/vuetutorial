@@ -66,29 +66,22 @@ trait CallIncoming
         }
         $customer_did = $customer_did->first();
         if (!$customer_did) {
-
-
+            
             if (preg_match("/^(0764)([0-9]){6}$/", $agi->request['agi_extension']) && !strpos($agi->request['agi_extension'], "*")) {
                 $agi->mylog("CONTEXT INCOMING 0764 TO LOCATION O2L");
-                $area_prefix = substr($agi->request['agi_extension'], 4, 2);
-                $agi->mylog("location prefix " . $area_prefix);
-
-                if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
-                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 6);
-                    $agi->mylog("dnid " . $dnid);
-                    $callee_user = CustomerExtension::where("name", $dnid)->first();
-                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 6));
-                    $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
-                    $agi->exec_setlanguage($location_customer->pbx_lang);
-                    $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
-                    $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
-                    $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
-                    $agi->exec('Set', "CDR(route)=o2l");
-                }
-
-                exit;
+                $did_number = substr($agi->request['agi_extension'], 0, 6);
+                $customer_did = CustomerDID::with(['did', 'customer'])
+                    ->wherehas('did', function ($query) use ($did_number) {
+                        $query->where('did', 'like', '%' . $did_number);
+                    })
+                    ->where('status', '<>', 'passive')
+                    ->first();
             }
-            
+        }
+
+
+        if (!$customer_did) {
+
             // OUTGOING TO LOCATION O2L CONTEXT
             if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
                 $agi->mylog("CONTEXT OUTGOING TO LOCATION O2L");
