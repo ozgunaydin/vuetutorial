@@ -445,16 +445,25 @@ class AGIActions
                     $this->fastagi->mylog(" Arayan calleridsi kullaniliyor.. CallerID:{$callerid} ");
                 }
 
-                if (preg_match("/^(0764)/", $callerid)) {
-                    if (isset($params["original_caller_user"])) {
-                        $this->fastagi->mylog("original_caller_user: " . json_encode($params["original_caller_user"]));
+                if (isset($params["original_caller_user"])) {
+                    if (preg_match("/^(0764)/", $callerid)) {
+
                         if (preg_match("/^(076411)/", $callerid)) {
-                            $callerid = substr($callerid, 0, 4) . $params["original_caller_user"]["name"];
-                        }else{
-                            $callerid .= $params["original_caller_user"]["name"];
+                            $callerid = substr($callerid, 0, 4);
                         }
+
+                        $callerid .= $params["original_caller_user"]["name"];
+
+                    } else if (preg_match("/^(777)/", $callerid)) { // THIS IS TAFICS
+                        $callerid = substr($callerid, 0, 3) . $params["original_caller_user"]["name"];
+
+                        if (preg_match("/^(888)/", $callee_number)) {
+                            $callee_number = substr($callee_number, 2);
+                        }
+
                     }
                 }
+
 
                 $this->fastagi->exec("Set", "CALLERID(num)={$callerid}");
 
@@ -478,7 +487,14 @@ class AGIActions
 
         } else {
             if ($customer_did) {
-                $this->fastagi->mylog("callOutgoing  Customer DID {$customer_did->id} Status {$customer_did->status}");
+                $this->fastagi->mylog("callOutgoing  Customer DID 
+{
+$customer_did->id
+}
+
+ Status {
+    $customer_did->status}
+");
             } else {
                 $this->fastagi->mylog("callOutgoing  Customer DID not found");
             }
