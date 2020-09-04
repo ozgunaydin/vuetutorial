@@ -66,7 +66,7 @@ trait CallIncoming
         }
         $customer_did = $customer_did->first();
         if (!$customer_did) {
-            
+
             if (preg_match("/^(0764)([0-9]){6}$/", $agi->request['agi_extension']) && !strpos($agi->request['agi_extension'], "*")) {
                 $agi->mylog("CONTEXT INCOMING 0764 TO LOCATION O2L");
                 $did_number = substr($agi->request['agi_extension'], 0, 6);
@@ -105,14 +105,14 @@ trait CallIncoming
             }
 
 
-            // OUTGOING TO LOCATION J2E CONTEXT
-            if (preg_match("/^9999/", $agi->request['agi_extension'])) {
-                $agi->mylog("INCOMING JEMUS");
-                $area_prefix = substr($agi->request['agi_extension'], 4, 2);
+            // OUTGOING TO LOCATION J2EL CONTEXT
+            if (preg_match("/^(91)/", $agi->request['agi_extension'])) {
+                $agi->mylog("INCOMING JEMUS 91X.");
+                $area_prefix = substr($agi->request['agi_extension'], 2, 2);
                 $agi->mylog("location prefix " . $area_prefix);
 
                 if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
-                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 6);
+                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 4);
                     $agi->mylog("dnid " . $dnid);
                     $callee_user = CustomerExtension::where("name", $dnid)->first();
                     $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 0));
@@ -121,7 +121,7 @@ trait CallIncoming
                     $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
                     $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
                     $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
-                    $agi->exec('Set', "CDR(route)=J2E");
+                    $agi->exec('Set', "CDR(route)=J2LE");
                 }
 
                 exit;
