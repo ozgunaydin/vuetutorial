@@ -96,7 +96,7 @@ trait CallIncoming
 
                     if ($callerUser) {
                         $agi->mylog("CALLIN: CHECK CALLPLAN " . $customer_id);
-                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], 3), $callerUser);
+                        $agiactions->callCustomerCallPlan($agi->request['agi_extension'], $callerUser);
                     } else {
                         $agi->mylog("CALLIN: NO CALLER USER " . $customer_id . "*9999");
                     }
