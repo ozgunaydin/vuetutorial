@@ -76,7 +76,7 @@ trait CallIncoming
                     })
                     ->where('status', '<>', 'passive')
                     ->first();
-            }elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
+            } elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
                 $agi->mylog("CONTEXT INCOMING JEMUS DID FWD");
                 $did_number = substr($did_number, 0, 3);
                 $customer_did = CustomerDID::with(['did', 'customer'])
@@ -85,6 +85,18 @@ trait CallIncoming
                     })
                     ->where('status', '<>', 'passive')
                     ->first();
+
+                if ($customer_did) {
+                    $customer_id = $customer_did->customer_id;
+                    $callerUser = CustomerExtension::with('customer')->where('name', $customer_did->customer_id . "*9999")->first();
+
+                    if ($callerUser) {
+                        $agi->mylog("CALLIN: CHECK CALLPLAN " . $customer_id);
+                        $agi->callCustomerCallPlan(substr($agi->request['agi_extension'], 3), $callerUser);
+                    } else {
+                        $agi->mylog("CALLIN: NO CALLER USER " . $customer_id . "*9999");
+                    }
+                }
             }
         }
 
