@@ -76,6 +76,15 @@ trait CallIncoming
                     })
                     ->where('status', '<>', 'passive')
                     ->first();
+            }elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
+                $agi->mylog("CONTEXT INCOMING JEMUS DID FWD");
+                $did_number = substr($did_number, 0, 3);
+                $customer_did = CustomerDID::with(['did', 'customer'])
+                    ->wherehas('did', function ($query) use ($did_number) {
+                        $query->where('did', 'like', '%' . $did_number);
+                    })
+                    ->where('status', '<>', 'passive')
+                    ->first();
             }
         }
 
