@@ -21,11 +21,37 @@ trait CallIncoming
 
         $agiactions = new AGIActions($agi);
 
-        $did_number = str_replace('+', '', $agi->request['agi_dnid']);
+        // THIS FOR HUAWEI ROUTER FXS OUTGOING CALL
+        if (preg_match("/^(64)([0-9]){6}$|^(0764)([0-9]){6}$/", $agi->request['agi_callerid'])) {
+            $agi->mylog("FXS IN TO OUTGOING CALL START");
 
-        if (preg_match("/^(6414)/", $did_number)) {
-            $did_number = "07".$did_number;
+            if (preg_match("/^(64)([0-9]){6}$/", $agi->request['agi_callerid'])) {
+//                $did_number = "07".substr($agi->request['agi_callerid'], 0, 4);
+                $customer_id = substr($agi->request['agi_callerid'], 2, 2);
+                $agi->mylog("CALLER ID STARTS WITH 64");
+            } else {
+//                $did_number = substr($agi->request['agi_callerid'], 0, 6);
+                $customer_id = substr($agi->request['agi_callerid'], 4, 2);
+                $agi->mylog("CALLER ID STARTS WITH 0764");
+            }
+
+//            $customer_did = CustomerDID::with(['did', 'customer'])
+//                ->wherehas('did', function ($query) use ($did_number) {
+//                    $query->where('did', 'like', '%' . $did_number);
+//                })
+//                ->where('status', '<>', 'passive')
+//                ->first();
+
+            $callerUser = $customer_id . "*" . substr($agi->request['agi_callerid'], -4);
+            $callerUser = CustomerExtension::where("name", $callerUser)->first();
+            $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$agi->request['agi_dnid']}");
+
+            $agiactions->callExtensionToOutgoing($agi->request['agi_dnid'], $callerUser);
+
         }
+
+
+        $did_number = str_replace('+', '', $agi->request['agi_dnid']);
 
         if (!is_numeric($did_number)) {
             $header_to = $agi->get_variable('SIP_HEADER(TO)');
@@ -70,6 +96,7 @@ trait CallIncoming
         }
         $customer_did = $customer_did->first();
 
+
         if (!$customer_did) {
 
             // TTVPN tto EXTENSION ttvpn2e CONTEXT
@@ -107,7 +134,7 @@ trait CallIncoming
                         $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
                     }
 
-                    if($callee_user){
+                    if ($callee_user) {
                         $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
                         $agi->exec('Set', "CDR(route)=TTVPN2E");
                     }
