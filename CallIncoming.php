@@ -23,6 +23,10 @@ trait CallIncoming
 
         $did_number = str_replace('+', '', $agi->request['agi_dnid']);
 
+        if (preg_match("/^(6414)/", $did_number)) {
+            $did_number = "07".$did_number;
+        }
+
         if (!is_numeric($did_number)) {
             $header_to = $agi->get_variable('SIP_HEADER(TO)');
 
@@ -65,6 +69,7 @@ trait CallIncoming
             exit;
         }
         $customer_did = $customer_did->first();
+
         if (!$customer_did) {
 
             // TTVPN tto EXTENSION ttvpn2e CONTEXT
@@ -125,35 +130,36 @@ trait CallIncoming
         if (!$customer_did) {
 
             // OUTGOING TO LOCATION O2L CONTEXT
-            if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
-                $agi->mylog("CONTEXT OUTGOING TO LOCATION O2L");
-                $area_prefix = substr($agi->request['agi_extension'], 0, 2);
-                $agi->mylog("location prefix " . $area_prefix);
-
-                if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
-                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
-                    $agi->mylog("dnid " . $dnid);
-                    $callee_user = CustomerExtension::where("name", $dnid)->first();
-                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 2));
-                    $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
-                    $agi->exec_setlanguage($location_customer->pbx_lang);
-                    $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
-                    $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
-
-                    if ($callerUser) {
-                        $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
-                        $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
-                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
-                    } else {
-                        $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
-                    }
-                    
-                    $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
-                    $agi->exec('Set', "CDR(route)=o2l");
-                }
-
-                exit;
-            }
+//            if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
+//                $agi->mylog("CONTEXT OUTGOING TO LOCATION O2L");
+//                $area_prefix = substr($agi->request['agi_extension'], 0, 2);
+//                $agi->mylog("location prefix " . $area_prefix);
+//
+//                if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
+//                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
+//                    $agi->mylog("dnid " . $dnid);
+//                    $callee_user = CustomerExtension::where("name", $dnid)->first();
+//                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 2));
+//                    $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
+//                    $agi->exec_setlanguage($location_customer->pbx_lang);
+//                    $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
+//                    $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
+//
+//                    $callerUser = CustomerExtension::with('customer')->where('name', $location_customer->id . "*9999")->first();
+//                    if ($callerUser) {
+//                        $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
+//                        $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
+//                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
+//                    } else {
+//                        $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
+//                    }
+//
+//                    $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
+//                    $agi->exec('Set', "CDR(route)=o2l");
+//                }
+//
+//                exit;
+//            }
 
 
             // OUTGOING TO LOCATION J2EL CONTEXT
