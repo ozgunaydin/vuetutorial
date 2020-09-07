@@ -86,6 +86,7 @@ trait CallIncoming
                     $agi->mylog("dnid " . $dnid);
                     $callee_user = CustomerExtension::where("name", $dnid)->first();
 //                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 0));
+                    $agi->exec('Set', "CDR(src)={$agi->request['agi_callerid']}");
                     $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
                     $agi->exec_setlanguage($location_customer->pbx_lang);
                     $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
@@ -139,6 +140,14 @@ trait CallIncoming
                     $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
                     $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
 
+                    if ($callerUser) {
+                        $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
+                        $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
+                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
+                    } else {
+                        $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
+                    }
+                    
                     $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
                     $agi->exec('Set', "CDR(route)=o2l");
                 }
