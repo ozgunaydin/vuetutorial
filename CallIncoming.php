@@ -26,31 +26,41 @@ trait CallIncoming
             $agi->mylog("FXS IN TO OUTGOING CALL START");
 
             if (preg_match("/^(64)([0-9]){6}$/", $agi->request['agi_callerid'])) {
-//                $did_number = "07".substr($agi->request['agi_callerid'], 0, 4);
+                $did_pattern = "07" . substr($agi->request['agi_callerid'], 0, 4);
                 $area_prefix = substr($agi->request['agi_callerid'], 2, 2);
                 $agi->mylog("CALLER ID STARTS WITH 64");
             } else {
-//                $did_number = substr($agi->request['agi_callerid'], 0, 6);
+                $did_pattern = substr($agi->request['agi_callerid'], 0, 6);
                 $area_prefix = substr($agi->request['agi_callerid'], 4, 2);
                 $agi->mylog("CALLER ID STARTS WITH 0764");
             }
 
-//            $customer_did = CustomerDID::with(['did', 'customer'])
-//                ->wherehas('did', function ($query) use ($did_number) {
-//                    $query->where('did', 'like', '%' . $did_number);
-//                })
-//                ->where('status', '<>', 'passive')
-//                ->first();
+            $did_number = str_replace('+', '', $agi->request['agi_dnid']);
 
+            if (preg_match("/^(07)([0-9]){6}$/", $did_number)) {
+                $agi->mylog("DID STARTS WITH 07 GOT TTVPN");
+
+                $customer_did = CustomerDID::with(['did', 'customer'])
+                    ->wherehas('did', function ($query) use ($did_pattern) {
+                        $query->where('did', 'like', '%' . $did_pattern);
+                    })
+                    ->where('status', '<>', 'passive')
+                    ->first();
+
+
+                $params['customer_did_id'] = $customer_did->id;
+
+                $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
+                
+            }
             $agi->mylog("location prefix " . $area_prefix);
             $location_customer = Customer::where('location_prefix', $area_prefix)->first();
-            
+
             $callerUser = $location_customer->id . "*" . substr($agi->request['agi_callerid'], -4);
             $agi->mylog("CALLER USER STR IS {$callerUser}");
             $callerUser = CustomerExtension::where("name", $callerUser)->first();
             $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$agi->request['agi_dnid']}");
-
-            $agiactions->callExtensionToOutgoing($agi->request['agi_dnid'], $callerUser);
+            $agiactions->callExtensionToOutgoing($agi->request['agi_dnid'], $callerUser, $params);
 
         }
 
