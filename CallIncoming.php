@@ -27,11 +27,11 @@ trait CallIncoming
 
             if (preg_match("/^(64)([0-9]){6}$/", $agi->request['agi_callerid'])) {
 //                $did_number = "07".substr($agi->request['agi_callerid'], 0, 4);
-                $customer_id = substr($agi->request['agi_callerid'], 2, 2);
+                $area_prefix = substr($agi->request['agi_callerid'], 2, 2);
                 $agi->mylog("CALLER ID STARTS WITH 64");
             } else {
 //                $did_number = substr($agi->request['agi_callerid'], 0, 6);
-                $customer_id = substr($agi->request['agi_callerid'], 4, 2);
+                $area_prefix = substr($agi->request['agi_callerid'], 4, 2);
                 $agi->mylog("CALLER ID STARTS WITH 0764");
             }
 
@@ -42,7 +42,11 @@ trait CallIncoming
 //                ->where('status', '<>', 'passive')
 //                ->first();
 
-            $callerUser = $customer_id . "*" . substr($agi->request['agi_callerid'], -4);
+            $agi->mylog("location prefix " . $area_prefix);
+            $location_customer = Customer::where('location_prefix', $area_prefix)->first();
+            
+            $callerUser = $location_customer->id . "*" . substr($agi->request['agi_callerid'], -4);
+            $agi->mylog("CALLER USER STR IS {$callerUser}");
             $callerUser = CustomerExtension::where("name", $callerUser)->first();
             $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$agi->request['agi_dnid']}");
 
