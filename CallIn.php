@@ -102,6 +102,7 @@ trait CallIn
         // LOCATION TO LOCATION L2L CONTEXT
         if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
             $agi->mylog("CONTEXT LOCATION TO LOCATION");
+            $callee_number = $agi->request['agi_extension'];
             $area_prefix = substr($agi->request['agi_extension'], 0, 2);
             $agi->mylog("location prefix " . $area_prefix);
 
@@ -119,6 +120,7 @@ trait CallIn
         // LOCATION TO LOCATION L2L CONTEXT 8XXX
         if ($callerUser->customer_id != 1 && preg_match("/^(8)([0-9]){3,4}$/", $agi->request['agi_extension'])) {
             $agi->mylog("CONTEXT LOCATION TO LOCATION 8XXX MERKEZ");
+            $callee_number = "11".$agi->request['agi_extension'];
 
             if ($location_customer = Customer::find(1)) {
                 $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
@@ -129,6 +131,10 @@ trait CallIn
                 $agi->exec('Set', "CDR(dst)={$agi->request['agi_extension']}");
                 $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
             }
+        }
+
+        if(isset($callee_number) && preg_match("/5001|5098|5483|5484|5583|5584|5585|5586/", substr($agi->request['agi_extension'], -4))){
+            $agiactions->callExtensionToOutgoing("0764".$callee_number, $callerUser);
         }
 
         $agiactions->callExtensionToExtension($dnid, $callerUser);
