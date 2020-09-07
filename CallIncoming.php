@@ -76,13 +76,9 @@ trait CallIncoming
                     })
                     ->where('status', '<>', 'passive')
                     ->first();
-            } elseif (preg_match("/^(092)|^(093)|^(094)|^(95)/", $did_number)) {
+            } elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
                 $agi->mylog("CONTEXT INCOMING JEMUS DID FWD");
-                if(preg_match("/^(95)/", $did_number)){
-                    $did_number = substr($did_number, 0, 2);
-                }else{
-                    $did_number = substr($did_number, 0, 3);
-                }
+                $did_number = substr($did_number, 0, 3);
                 $customer_did = CustomerDID::with(['did', 'customer'])
                     ->wherehas('did', function ($query) use ($did_number) {
                         $query->where('did', 'like', '%' . $did_number);
@@ -122,6 +118,17 @@ trait CallIncoming
                     $agi->exec_setlanguage($location_customer->pbx_lang);
                     $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
                     $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
+                    
+                    // FOR THE FXS PORTS DEFINED IN CALLPLAN
+                    $callerUser = CustomerExtension::with('customer')->where('name', $customer_did->customer_id . "*9999")->first();
+
+                    if ($callerUser) {
+                        $agi->mylog("CALLIN O2L: CHECK CALLPLAN " . $customer_id);
+                        $agiactions->callCustomerCallPlan($agi->request['agi_extension'], $callerUser);
+                    } else {
+                        $agi->mylog("CALLIN O2L: NO CALLER USER " . $customer_id . "*9999");
+                    }
+                    
                     $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
                     $agi->exec('Set', "CDR(route)=o2l");
                 }
@@ -131,13 +138,13 @@ trait CallIncoming
 
 
             // OUTGOING TO LOCATION J2EL CONTEXT
-            if (preg_match("/^(91)/", $agi->request['agi_extension'])) {
+            if (preg_match("/^(091)/", $agi->request['agi_extension'])) {
                 $agi->mylog("INCOMING JEMUS 91X.");
-                $area_prefix = substr($agi->request['agi_extension'], 2, 2);
+                $area_prefix = substr($agi->request['agi_extension'], 3, 2);
                 $agi->mylog("location prefix " . $area_prefix);
 
                 if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
-                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 4);
+                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 5);
                     $agi->mylog("dnid " . $dnid);
                     $callee_user = CustomerExtension::where("name", $dnid)->first();
                     $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 0));
