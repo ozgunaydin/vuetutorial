@@ -66,13 +66,13 @@ trait CallIncoming
         }
         $customer_did = $customer_did->first();
         if (!$customer_did) {
-            
+
             // TTVPN tto EXTENSION ttvpn2e CONTEXT
             if (preg_match("/^(0764)([0-9]){4}$|^(0764)([0-9]){6}$/", $agi->request['agi_extension'])) {
 
                 if (preg_match("/^(0764)([0-9]){6}$/", $agi->request['agi_extension'])) {
                     $agi->mylog("INCOMING TTVPN MERKEZ 0764XXXXXX");
-                    $area_prefix = substr($agi->request['agi_extension'], 0, 2);
+                    $area_prefix = substr($agi->request['agi_extension'], 4, 2);
                     $agi->mylog("location prefix " . $area_prefix);
                     $location_customer = Customer::where('location_prefix', $area_prefix)->first();
                 } else {
@@ -81,10 +81,11 @@ trait CallIncoming
                 }
 
                 if ($location_customer) {
-                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 4);
+                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], -4);
+
                     $agi->mylog("dnid " . $dnid);
                     $callee_user = CustomerExtension::where("name", $dnid)->first();
-                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 0));
+//                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 0));
                     $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
                     $agi->exec_setlanguage($location_customer->pbx_lang);
                     $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
@@ -94,18 +95,19 @@ trait CallIncoming
 
                     if ($callerUser) {
                         $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
-                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], 4), $callerUser);
+                        $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
+                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
                     } else {
                         $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
                     }
-                    
+
                     if($callee_user){
                         $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
                         $agi->exec('Set', "CDR(route)=TTVPN2E");
                     }
                 }
             }
-            
+
             if (preg_match("/^(0764)([0-9]){6}$/", $agi->request['agi_extension']) && !strpos($agi->request['agi_extension'], "*")) {
                 $agi->mylog("CONTEXT INCOMING 0764 TO LOCATION O2L");
                 $did_number = substr($agi->request['agi_extension'], 0, 6);
@@ -136,7 +138,7 @@ trait CallIncoming
                     $agi->exec_setlanguage($location_customer->pbx_lang);
                     $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
                     $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
-                    
+
                     $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
                     $agi->exec('Set', "CDR(route)=o2l");
                 }
@@ -166,7 +168,7 @@ trait CallIncoming
 
                 exit;
             }
-            
+
             if (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
                 $agi->mylog("CONTEXT INCOMING JEMUS DID FWD");
                 $did_number = substr($did_number, 0, 3);
@@ -189,7 +191,7 @@ trait CallIncoming
                     }
                 }
             }
-            
+
             $callerid = str_replace('+', '', $agi->request['agi_callerid']);
             //Dahili aramasi varmı kontrol ediliyor
             $agiactions->callTrunkToExtension($callerid, $did_number);
