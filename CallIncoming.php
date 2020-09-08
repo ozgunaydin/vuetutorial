@@ -51,16 +51,20 @@ trait CallIncoming
                 $params['customer_did_id'] = $customer_did->id;
 
                 $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
-                
+
+            } else if (preg_match("/^(01)[0-9]{7}$|^(01)0[12346789][0-9][0-9][1-9]([0-9]){6}$/", $did_number)) {
+                $did_number = substr($did_number, 2);
             }
+
+
             $agi->mylog("location prefix " . $area_prefix);
             $location_customer = Customer::where('location_prefix', $area_prefix)->first();
 
             $callerUser = $location_customer->id . "*" . substr($agi->request['agi_callerid'], -4);
             $agi->mylog("CALLER USER STR IS {$callerUser}");
             $callerUser = CustomerExtension::where("name", $callerUser)->first();
-            $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$agi->request['agi_dnid']}");
-            $agiactions->callExtensionToOutgoing($agi->request['agi_dnid'], $callerUser, $params);
+            $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$did_number}");
+            $agiactions->callExtensionToOutgoing($did_number, $callerUser, $params);
 
         }
 
