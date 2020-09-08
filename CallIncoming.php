@@ -54,7 +54,19 @@ trait CallIncoming
                 $callee_number = "0764" . $did_number;
                 $agi->mylog("CONTEXT FXS TO LOCATION for FXS Extensions");
                 $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$callee_number}");
-                $agiactions->callExtensionToOutgoing($callee_number, $callerUser);
+
+                $customer_did = CustomerDID::with(['did', 'customer'])
+                    ->wherehas('did', function ($query) use ($did_pattern) {
+                        $query->where('did', 'like', '%' . $did_pattern);
+                    })
+                    ->where('status', '<>', 'passive')
+                    ->first();
+
+                $params['customer_did_id'] = $customer_did->id;
+
+                $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
+                
+                $agiactions->callExtensionToOutgoing($callee_number, $callerUser, $params);
             } // FXS TO LOCATION FXS2L CONTEXT
             else if (strlen($agi->request['agi_extension']) == 6 && !strpos($did_number, "*")) {
                 $agi->mylog("CONTEXT FXS TO LOCATION");
@@ -167,12 +179,54 @@ trait CallIncoming
             if (preg_match("/^(0764)([0-9]){4}$|^(0764)([0-9]){6}$/", $agi->request['agi_extension'])) {
 
                 if (preg_match("/^(0764)([0-9]){6}$/", $agi->request['agi_extension'])) {
-                    $agi->mylog("INCOMING TTVPN MERKEZ 0764XXXXXX");
+                    $agi->mylog("INCOMING TTVPN 0764XXXXXX");
                     $area_prefix = substr($agi->request['agi_extension'], 4, 2);
                     $agi->mylog("location prefix " . $area_prefix);
                     $location_customer = Customer::where('location_prefix', $area_prefix)->first();
                 } else {
                     $agi->mylog("INCOMING TTVPN MERKEZ 0764XXXX");
+                    $location_customer = Customer::find(1);
+                }
+
+                if ($location_customer) {
+                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], -4);
+
+                    $agi->mylog("dnid " . $dnid);
+                    $callee_user = CustomerExtension::where("name", $dnid)->first();
+//                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 0));
+                    $agi->exec('Set', "CDR(src)={$agi->request['agi_callerid']}");
+                    $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
+                    $agi->exec_setlanguage($location_customer->pbx_lang);
+                    $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
+                    $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
+
+                    $callerUser = CustomerExtension::with('customer')->where('name', $location_customer->id . "*9999")->first();
+
+                    if ($callerUser) {
+                        $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
+                        $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
+                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
+                    } else {
+                        $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
+                    }
+
+                    if ($callee_user) {
+                        $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
+                        $agi->exec('Set', "CDR(route)=TTVPN2E");
+                    }
+                }
+            }
+
+            // TAFICS tto EXTENSION taficse CONTEXT
+            if (preg_match("/^(777)([0-9]){4}$|^(777)([0-9]){6}$/", $agi->request['agi_extension'])) {
+
+                if (preg_match("/^(777)([0-9]){6}$/", $agi->request['agi_extension'])) {
+                    $agi->mylog("INCOMING TAFICS 777XXXXXX");
+                    $area_prefix = substr($agi->request['agi_extension'], 3, 2);
+                    $agi->mylog("location prefix " . $area_prefix);
+                    $location_customer = Customer::where('location_prefix', $area_prefix)->first();
+                } else {
+                    $agi->mylog("INCOMING TAFICS MERKEZ 0764XXXX");
                     $location_customer = Customer::find(1);
                 }
 
@@ -275,7 +329,7 @@ trait CallIncoming
                 exit;
             }
 
-            if (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
+            elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
                 $agi->mylog("CONTEXT INCOMING JEMUS DID FWD");
                 $did_number = substr($did_number, 0, 3);
                 $customer_did = CustomerDID::with(['did', 'customer'])
