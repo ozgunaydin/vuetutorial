@@ -52,7 +52,7 @@ trait CallIncoming
 
                 $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
 
-            } else if (preg_match("/^(01)[0-9]{7}$|^(01)0[12346789][0-9][0-9][1-9]([0-9]){6}$/", $did_number)) {
+            } else if (preg_match("/^(01)|^(01)[0-9]{7}$|^(01)0[12346789][0-9][0-9][1-9]([0-9]){6}$/", $did_number)) {
                 $did_number = substr($did_number, 2);
             }
 
