@@ -27,52 +27,40 @@ trait CallIncoming
 
             if (preg_match("/^(64)([0-9]){6}$/", $agi->request['agi_callerid'])) {
                 $did_pattern = "07" . substr($agi->request['agi_callerid'], 0, 4);
-                $area_prefix = substr($agi->request['agi_callerid'], 2, 2);
+                $caller_area_prefix = substr($agi->request['agi_callerid'], 2, 2);
                 $agi->mylog("CALLER ID STARTS WITH 64");
             } else {
                 $did_pattern = substr($agi->request['agi_callerid'], 0, 6);
-                $area_prefix = substr($agi->request['agi_callerid'], 4, 2);
+                $caller_area_prefix = substr($agi->request['agi_callerid'], 4, 2);
                 $agi->mylog("CALLER ID STARTS WITH 0764");
             }
 
             $did_number = str_replace('+', '', $agi->request['agi_dnid']);
 
-            if (preg_match("/^(07)([0-9]){6}$/", $did_number)) {
-                $agi->mylog("DID STARTS WITH 07 GOT TTVPN");
+            $agi->mylog("caller location prefix " . $caller_area_prefix);
+            $caller_location_customer = Customer::where('location_prefix', $caller_area_prefix)->first();
 
-                $customer_did = CustomerDID::with(['did', 'customer'])
-                    ->wherehas('did', function ($query) use ($did_pattern) {
-                        $query->where('did', 'like', '%' . $did_pattern);
-                    })
-                    ->where('status', '<>', 'passive')
-                    ->first();
-
-
-                $params['customer_did_id'] = $customer_did->id;
-
-                $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
-
-            } else if (preg_match("/^(01)|^(01)[0-9]{7}$|^(01)0[12346789][0-9][0-9][1-9]([0-9]){6}$/", $did_number)) {
-                $did_number = substr($did_number, 2);
-            }
-
-
-            $agi->mylog("location prefix " . $area_prefix);
-            $location_customer = Customer::where('location_prefix', $area_prefix)->first();
-
-            $callerUser = $location_customer->id . "*" . substr($agi->request['agi_callerid'], -4);
+            $callerUser = $caller_location_customer->id . "*" . substr($agi->request['agi_callerid'], -4);
             $agi->mylog("CALLER USER STR IS {$callerUser}");
             $callerUser = CustomerExtension::where("name", $callerUser)->first();
-            $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$did_number}");
+            $agi->mylog("CALLER USER IS {$callerUser->name} , DNID NUMBER IS: {$did_number}");
 
+            if ((strlen($did_number) == 4 || strlen($did_number) == 6) && preg_match("/5001|5098|5483|5484|5583|5584|5585|5586/", substr($did_number, -4))) {
+                $agi->mylog("CONTEXT FXS TO LOCATION for FXS Extensions");
 
-            // FXS TO LOCATION FXS2L CONTEXT
-            if (strlen($agi->request['agi_extension']) == 6 && !strpos($did_number, "*")) {
+                if (strlen($did_number) == 4) {
+                    $did_number = "11" . $did_number;
+                }
+                $callee_number = "0764" . $did_number;
+                $agi->mylog("CONTEXT FXS TO LOCATION for FXS Extensions");
+                $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$callee_number}");
+                $agiactions->callExtensionToOutgoing($callee_number, $callerUser);
+            } // FXS TO LOCATION FXS2L CONTEXT
+            else if (strlen($agi->request['agi_extension']) == 6 && !strpos($did_number, "*")) {
                 $agi->mylog("CONTEXT FXS TO LOCATION");
                 $area_prefix = substr($did_number, 0, 2);
-
-                $agi->mylog("location prefix " . $area_prefix);
-
+                $agi->mylog("callee location prefix " . $area_prefix);
+                $location_customer = Customer::where('location_prefix', $area_prefix)->first();
                 $dnid = $location_customer->id . "*" . substr($did_number, 2);
                 $agi->mylog("dnid " . $dnid);
 
@@ -80,12 +68,14 @@ trait CallIncoming
                 $agi->exec('Set', "CDR(route)=fxs2l");
                 $agi->exec('Set', "CDR(dst)={$did_number}");
                 $agi->exec('Set', "CDR(data)={$did_number}");
+                $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$dnid}");
 
                 $agiactions->callExtensionToExtension($dnid, $callerUser);
+                exit;
 
             } // LOCATION TO LOCATION L2L CONTEXT 8XXX
             else if ($callerUser->customer_id != 1 && preg_match("/^(8)([0-9]){3,4}$/", $did_number)) {
-                $agi->mylog("CONTEXT LOCATION TO LOCATION 8XXX MERKEZ");
+                $agi->mylog("CONTEXT FXS TO LOCATION 8XXX MERKEZ");
                 $did_number = "11" . $did_number;
 
                 if ($location_customer = Customer::find(1)) {
@@ -97,13 +87,31 @@ trait CallIncoming
                     $agi->exec('Set', "CDR(dst)={$did_number}");
                     $agi->exec('Set', "CDR(data)={$did_number}");
                 }
+                $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$dnid}");
 
                 $agiactions->callExtensionToExtension($dnid, $callerUser);
+                exit;
 
+            } else if (preg_match("/^(07)([0-9]){6}$/", $did_number)) {
+                $agi->mylog("DID STARTS WITH 07 GOT TTVPN");
+
+                $customer_did = CustomerDID::with(['did', 'customer'])
+                    ->wherehas('did', function ($query) use ($did_pattern) {
+                        $query->where('did', 'like', '%' . $did_pattern);
+                    })
+                    ->where('status', '<>', 'passive')
+                    ->first();
+
+                $params['customer_did_id'] = $customer_did->id;
+
+                $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
+
+            } else if (preg_match("/^(01)|^(01)[0-9]{7}$|^(01)0[12346789][0-9][0-9][1-9]([0-9]){6}$/", $did_number)) {
+                $did_number = substr($did_number, 2);
             }
 
             $agiactions->callExtensionToOutgoing($did_number, $callerUser, $params);
-
+            exit;
         }
 
 
