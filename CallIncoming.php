@@ -65,7 +65,7 @@ trait CallIncoming
                 $params['customer_did_id'] = $customer_did->id;
 
                 $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
-                
+
                 $agiactions->callExtensionToOutgoing($callee_number, $callerUser, $params);
             } // FXS TO LOCATION FXS2L CONTEXT
             else if (strlen($agi->request['agi_extension']) == 6 && !strpos($did_number, "*")) {
@@ -226,7 +226,7 @@ trait CallIncoming
                     $agi->mylog("location prefix " . $area_prefix);
                     $location_customer = Customer::where('location_prefix', $area_prefix)->first();
                 } else {
-                    $agi->mylog("INCOMING TAFICS MERKEZ 0764XXXX");
+                    $agi->mylog("INCOMING TAFICS MERKEZ 0777XXXX");
                     $location_customer = Customer::find(1);
                 }
 
@@ -254,7 +254,67 @@ trait CallIncoming
 
                     if ($callee_user) {
                         $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
-                        $agi->exec('Set', "CDR(route)=TTVPN2E");
+                        $agi->exec('Set', "CDR(route)=TAFICS2E");
+                    } else {
+                        $extension_location_arr = [
+                            "5501" => "185559",
+                            "5502" => "195559",
+                            "5000" => "205559",
+                            "5001" => "135459",
+                            "5002" => "145459",
+                            "5003" => "155459",
+                            "5004" => "165459",
+                            "5005" => "175459",
+                            "5410" => "125459",
+                        ];
+
+
+                        $extension_location="";
+                        if (isset($extension_location_arr[substr($dnid, -4)])) {
+                            $extension_location = $extension_location_arr[substr($dnid, -4)];
+                            $agi->mylog("Extension_location is: {$extension_location}");
+                        }else{
+                            $agi->mylog("Extension_location not found");
+                        }
+
+                        //CONTEXT TAFICS TO LOCATION TAFICS2L
+                        $agi->mylog("CONTEXT TAFICS TO LOCATION TAFICS2L");
+                        $area_prefix = substr($extension_location, 0, 2);
+                        $agi->mylog("location prefix " . $area_prefix);
+
+                        if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
+                            $customer_did = CustomerDID::with(['did', 'customer'])
+                                ->wherehas('did', function ($query) use ($dnid) {
+                                    $query->where('did', 'like', '%0764'.$dnid);
+                                })
+                                ->where('status', '<>', 'passive')
+                                ->where('customer_id', '<>', $location_customer->id)
+                                ->first();
+
+                            $agi->mylog("CUSTOMER DID: " . $customer_did->did->did);
+
+//                            $dnid = $location_customer->id . "*" . substr($extension_location, 2);
+//                            $agi->mylog("dnid " . $dnid);
+//                            $callee_user = CustomerExtension::where("name", $dnid)->first();
+//                            $agi->exec('Set', "CDR(dst)=" . substr($extension_location, 2));
+//                            $agi->exec('Set', "CDR(data)={$dnid}");
+//                            $agi->exec_setlanguage($location_customer->pbx_lang);
+//                            $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
+//                            $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
+//
+//                            $callerUser = CustomerExtension::with('customer')->where('name', $location_customer->id . "*5499")->first();
+//                            if ($callerUser) {
+//                                $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
+//                                $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
+//                                $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
+//                            } else {
+//                                $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*5499");
+//                            }
+//
+//                            $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
+                            $agi->exec('Set', "CDR(route)=TAFICS2L");
+                        }
+
                     }
                 }
             }
@@ -273,39 +333,6 @@ trait CallIncoming
 
 
         if (!$customer_did) {
-
-            // OUTGOING TO LOCATION O2L CONTEXT
-//            if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
-//                $agi->mylog("CONTEXT OUTGOING TO LOCATION O2L");
-//                $area_prefix = substr($agi->request['agi_extension'], 0, 2);
-//                $agi->mylog("location prefix " . $area_prefix);
-//
-//                if ($location_customer = Customer::where('location_prefix', $area_prefix)->first()) {
-//                    $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
-//                    $agi->mylog("dnid " . $dnid);
-//                    $callee_user = CustomerExtension::where("name", $dnid)->first();
-//                    $agi->exec('Set', "CDR(dst)=" . substr($agi->request['agi_extension'], 2));
-//                    $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
-//                    $agi->exec_setlanguage($location_customer->pbx_lang);
-//                    $agi->exec('Set', "CDR(customer_id)=" . $location_customer->id);
-//                    $agi->exec('Set', "CDR(reseller_id)=" . $location_customer->reseller_id);
-//
-//                    $callerUser = CustomerExtension::with('customer')->where('name', $location_customer->id . "*9999")->first();
-//                    if ($callerUser) {
-//                        $agi->mylog("CALLIN CALLER USER " . $location_customer->id);
-//                        $agi->mylog("SEARCH CALLPLAN FOR " . substr($agi->request['agi_extension'], -4));
-//                        $agiactions->callCustomerCallPlan(substr($agi->request['agi_extension'], -4), $callerUser);
-//                    } else {
-//                        $agi->mylog("CALLIN: NO CALLER USER " . $location_customer->id . "*9999");
-//                    }
-//
-//                    $agiactions->callOutgoingToExtension($agi->request['agi_callerid'], $callee_user);
-//                    $agi->exec('Set', "CDR(route)=o2l");
-//                }
-//
-//                exit;
-//            }
-
 
             // OUTGOING TO LOCATION J2EL CONTEXT
             if (preg_match("/^(091)/", $agi->request['agi_extension'])) {
@@ -327,9 +354,7 @@ trait CallIncoming
                 }
 
                 exit;
-            }
-
-            elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
+            } elseif (preg_match("/^(092)|^(093)|^(094)|^(095)/", $did_number)) {
                 $agi->mylog("CONTEXT INCOMING JEMUS DID FWD");
                 $did_number = substr($did_number, 0, 3);
                 $customer_did = CustomerDID::with(['did', 'customer'])
