@@ -64,6 +64,44 @@ trait CallIncoming
             $agi->mylog("CALLER USER STR IS {$callerUser}");
             $callerUser = CustomerExtension::where("name", $callerUser)->first();
             $agi->mylog("CALLER USER IS {$callerUser->name} , CALLEE NUMBER IS: {$did_number}");
+
+
+            // FXS TO LOCATION FXS2L CONTEXT
+            if (strlen($agi->request['agi_extension']) == 6 && !strpos($did_number, "*")) {
+                $agi->mylog("CONTEXT FXS TO LOCATION");
+                $area_prefix = substr($did_number, 0, 2);
+
+                $agi->mylog("location prefix " . $area_prefix);
+
+                $dnid = $location_customer->id . "*" . substr($did_number, 2);
+                $agi->mylog("dnid " . $dnid);
+
+                $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix . $callerUser->name);
+                $agi->exec('Set', "CDR(route)=fxs2l");
+                $agi->exec('Set', "CDR(dst)={$did_number}");
+                $agi->exec('Set', "CDR(data)={$did_number}");
+
+                $agiactions->callExtensionToExtension($dnid, $callerUser);
+
+            } // LOCATION TO LOCATION L2L CONTEXT 8XXX
+            else if ($callerUser->customer_id != 1 && preg_match("/^(8)([0-9]){3,4}$/", $did_number)) {
+                $agi->mylog("CONTEXT LOCATION TO LOCATION 8XXX MERKEZ");
+                $did_number = "11" . $did_number;
+
+                if ($location_customer = Customer::find(1)) {
+                    $dnid = $location_customer->id . "*" . substr($did_number, 2);
+                    $agi->mylog("dnid " . $dnid);
+
+                    $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix . $callerUser->name);
+                    $agi->exec('Set', "CDR(route)=fxs2l");
+                    $agi->exec('Set', "CDR(dst)={$did_number}");
+                    $agi->exec('Set', "CDR(data)={$did_number}");
+                }
+
+                $agiactions->callExtensionToExtension($dnid, $callerUser);
+
+            }
+
             $agiactions->callExtensionToOutgoing($did_number, $callerUser, $params);
 
         }
