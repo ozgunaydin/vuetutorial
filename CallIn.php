@@ -4,6 +4,7 @@ namespace App\Console\Commands\Agi;
 
 use App\Models\CDR;
 use App\Models\Customer\CallCenter\Report\AgentSummary;
+use App\Models\Customer\CustomerDID;
 use Illuminate\Console\Command;
 use App\Models\Customer\Customer;
 use App\Models\Customer\CustomerSummary;
@@ -110,7 +111,7 @@ trait CallIn
                 $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
                 $agi->mylog("dnid " . $dnid);
 
-                $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix.$callerUser->name);
+                $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix . $callerUser->name);
                 $agi->exec('Set', "CDR(route)=l2l");
                 $agi->exec('Set', "CDR(dst)={$agi->request['agi_extension']}");
                 $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
@@ -120,21 +121,33 @@ trait CallIn
         // LOCATION TO LOCATION L2L CONTEXT 8XXX
         if ($callerUser->customer_id != 1 && preg_match("/^(8)([0-9]){3,4}$/", $agi->request['agi_extension'])) {
             $agi->mylog("CONTEXT LOCATION TO LOCATION 8XXX MERKEZ");
-            $callee_number = "11".$agi->request['agi_extension'];
+            $callee_number = "11" . $agi->request['agi_extension'];
 
             if ($location_customer = Customer::find(1)) {
-                $dnid = $location_customer->id . "*" . substr($agi->request['agi_extension'], 2);
+                $dnid = $location_customer->id . "*" . substr($callee_number, 2);
                 $agi->mylog("dnid " . $dnid);
 
-                $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix.$callerUser->name);
+                $agi->exec("Set", "CALLERID(num)=" . $callerUser->customer->location_prefix . $callerUser->name);
                 $agi->exec('Set', "CDR(route)=l2l");
                 $agi->exec('Set', "CDR(dst)={$agi->request['agi_extension']}");
                 $agi->exec('Set', "CDR(data)={$agi->request['agi_extension']}");
             }
         }
 
-        if(isset($callee_number) && preg_match("/5001|5098|5483|5484|5583|5584|5585|5586/", substr($agi->request['agi_extension'], -4))){
-            $agiactions->callExtensionToOutgoing("0764".$callee_number, $callerUser);
+        if (isset($callee_number) && preg_match("/5001|5098|5483|5484|5583|5584|5585|5586/", substr($agi->request['agi_extension'], -4))) {
+            $customer_did = CustomerDID::with(['did', 'customer'])
+                ->wherehas('did', function ($query) use ($callerUser) {
+                    $query->where('did', 'like', '%07');
+                })
+                ->where('status', '<>', 'passive')
+                ->where('customer_id', '=', $callerUser->customer_id)
+                ->first();
+
+            $params['customer_did_id'] = $customer_did->id;
+
+            $agi->mylog("PARAM DID ID IS {$params['customer_did_id']}");
+
+            $agiactions->callExtensionToOutgoing("0764" . $callee_number, $callerUser, $params);
         }
 
         $agiactions->callExtensionToExtension($dnid, $callerUser);
