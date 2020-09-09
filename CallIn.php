@@ -96,9 +96,9 @@ trait CallIn
         }
 
         //Customer CallPlan varsa plana göre arar
-        $agiactions->callCustomerCallPlan($agi->request['agi_extension'], $callerUser);
+        $dnid = $agiactions->callCustomerCallPlan($agi->request['agi_extension'], $callerUser);
+        $dnid = $dnid ? $dnid : AGIHelper::fixDNID($callerUser, $agi->request['agi_extension']);
 
-        $dnid = AGIHelper::fixDNID($callerUser, $agi->request['agi_extension']);
 
         // LOCATION TO LOCATION L2L CONTEXT
         if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
@@ -135,12 +135,16 @@ trait CallIn
         }
 
         if (isset($callee_number) && preg_match("/5001|5098|5483|5484|5583|5584|5585|5586/", substr($agi->request['agi_extension'], -4))) {
+
+            if (strlen($agi->request['agi_extension']) == 4) {
+                $callee_number = "11" . $agi->request['agi_extension'];
+            }
+
             $customer_did = CustomerDID::with(['did', 'customer'])
                 ->wherehas('did', function ($query) use ($callerUser) {
-                    $query->where('did', 'like', '%07');
+                    $query->where('did', 'like', '%0764' . $callerUser->customer->location_prefix);
                 })
                 ->where('status', '<>', 'passive')
-                ->where('customer_id', '=', $callerUser->customer_id)
                 ->first();
 
             $params['customer_did_id'] = $customer_did->id;
