@@ -86,9 +86,9 @@ trait CallIn
         $agi->exec("Set", "CALLERID(num)={$callerUser->name}");
         $agi->exec('Set', "CDR(customer_id)={$callerUser->customer_id}");
 
-// check call right
+        // check call right
         $agi->mylog(" call rights: {$callerUser->call_rights} ");
-        if (!AGIHelper::checkCallPermission($callerUser, 'extension')) {
+        if (!AGIHelper::checkCallPermission($callerUser, 'extension') || (strlen($agi->request['agi_extension']) == 5 && !AGIHelper::checkCallPermission($callerUser, 'exclusive'))) {
             $agi->exec("Playback", "nodialpermission");
             $agi->mylog(" no dial permission for extension");
             $agi->exec("NoCDR", "");
@@ -97,8 +97,7 @@ trait CallIn
 
         //Customer CallPlan varsa plana göre arar
         $dnid = $agiactions->callCustomerCallPlan($agi->request['agi_extension'], $callerUser);
-        $dnid = $dnid ? $dnid : AGIHelper::fixDNID($callerUser, $agi->request['agi_extension']);
-
+        $dnid = AGIHelper::fixDNID($callerUser, $dnid ? $dnid : $agi->request['agi_extension']);
 
         // LOCATION TO LOCATION L2L CONTEXT
         if (strlen($agi->request['agi_extension']) == 6 && !strpos($agi->request['agi_extension'], "*")) {
